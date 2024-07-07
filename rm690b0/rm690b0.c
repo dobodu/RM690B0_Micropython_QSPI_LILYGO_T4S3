@@ -313,7 +313,7 @@ STATIC mp_obj_t rm690b0_RM690B0_init(mp_obj_t self_in)
         self->colmod_cal,
     }, 1);													// Interface Pixel Format
 	
-	write_spi(self, 0xC2, (uint8_t[]) {0x00}, 33);
+	write_spi(self, LCD_CMD_SETDSIMODE, (uint8_t[]) {0x00}, 1);
 	write_spi(self, LCD_CMD_TEON, (uint8_t[]) {0x00}, 1); 	//TE ON
 	write_spi(self, LCD_CMD_WRDISBV, (uint8_t[]) {0x00}, 1); 	//WRITE BRIGHTNESS VALUE
 	write_spi(self, LCD_CMD_SLPOUT, NULL, 128); 	//SLEEP OUT
@@ -322,10 +322,10 @@ STATIC mp_obj_t rm690b0_RM690B0_init(mp_obj_t self_in)
         self->madctl_val,
     }, 1);													//MADCTL
 	
-	write_spi(self, LCD_CMD_DISPON, NULL, 32); 	//DISPLAY ON DELA 10MS
+	write_spi(self, LCD_CMD_DISPON, NULL, 1); 	//DISPLAY ON DELA 10MS
 	write_spi(self, LCD_CMD_WRDISBV, (uint8_t[]) {0xFF}, 1); 	//WRITE MAX BRIGHTNESS VALUE
 
-    write_spi(self, LCD_CMD_SLPOUT, NULL, 0);     //sleep out
+    write_spi(self, LCD_CMD_SLPOUT, NULL, 1);     //sleep out
     mp_hal_delay_ms(100);    
 
 
