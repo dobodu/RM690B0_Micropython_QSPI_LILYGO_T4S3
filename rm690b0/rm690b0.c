@@ -1243,7 +1243,9 @@ STATIC mp_obj_t rm690b0_RM690B0_text(size_t n_args, const mp_obj_t *args) {
     }
 
     mp_int_t x0 = mp_obj_get_int(args[3]);
+	x0 += self->x_gap;
     mp_int_t y0 = mp_obj_get_int(args[4]);
+	y0 += self->y_gap;
 
     mp_obj_dict_t *dict = MP_OBJ_TO_PTR(font->globals);
     const uint8_t width = mp_obj_get_int(mp_obj_dict_get(dict, MP_OBJ_NEW_QSTR(MP_QSTR_WIDTH)));
@@ -1385,7 +1387,9 @@ STATIC mp_obj_t rm690b0_RM690B0_write(size_t n_args, const mp_obj_t *args) {
     mp_obj_module_t *font = MP_OBJ_TO_PTR(args[1]);
 
     mp_int_t x = mp_obj_get_int(args[3]);
+	x += self->x_gap;
     mp_int_t y = mp_obj_get_int(args[4]);
+	y += self->y_gap;
     mp_int_t fg_color;
     mp_int_t bg_color;
 
