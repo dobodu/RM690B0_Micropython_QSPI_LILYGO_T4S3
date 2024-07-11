@@ -38,17 +38,17 @@ const char* color_space_desc[] = {
 };
 
 STATIC const rm690b0_rotation_t ORIENTATIONS_GENERAL[4] = {
-    { 0x00, 0, 0, 0, 0}, // { madctl, width, height, colstart, rowstart }
-    { 0x60, 0, 0, 0, 0},
-    { 0xC0, 0, 0, 0, 0},
-    { 0xA0, 0, 0, 0, 0}
+    { 0x00, 0, 0, 16, 0}, // { madctl, width, height, colstart, rowstart }
+    { 0x60, 0, 0, 0, 16},
+    { 0xC0, 0, 0, 16, 0},
+    { 0xA0, 0, 0, 0, 16}
 };
 
 STATIC const rm690b0_rotation_t ORIENTATIONS_450x600[4] = {
-    { 0x00, 450, 600, 0, 0 },
-    { 0x60, 600, 450, 0, 0 },
-    { 0xC0, 450, 600, 0, 0 },
-    { 0xA0, 600, 450, 0, 0 }
+    { 0x00, 450, 600, 16, 0 },
+    { 0x60, 600, 450, 0, 16 },
+    { 0xC0, 450, 600, 16, 0 },
+    { 0xA0, 600, 450, 0, 16 }
 };
 
 int mod(int x, int m) {
@@ -2160,7 +2160,7 @@ const mp_obj_type_t rm690b0_RM690B0_type = {
 
 
 STATIC const mp_map_elem_t mp_module_rm690b0_globals_table[] = {
-    { MP_ROM_QSTR(MP_QSTR___name__),   MP_OBJ_NEW_QSTR(MP_QSTR_rm690b0)          },
+    { MP_ROM_QSTR(MP_QSTR___name__),   MP_OBJ_NEW_QSTR(MP_QSTR_rm690b0)      },
     { MP_ROM_QSTR(MP_QSTR_RM690B0),    (mp_obj_t)&rm690b0_RM690B0_type       },
     { MP_ROM_QSTR(MP_QSTR_QSPIPanel),  (mp_obj_t)&rm690b0_qspi_bus_type      },
     { MP_ROM_QSTR(MP_QSTR_RGB),        MP_ROM_INT(COLOR_SPACE_RGB)           },
