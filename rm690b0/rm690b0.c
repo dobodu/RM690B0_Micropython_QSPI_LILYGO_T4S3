@@ -378,6 +378,11 @@ STATIC void set_area(rm690b0_RM690B0_obj_t *self, uint16_t x0, uint16_t y0, uint
     if (y0 > y1 || y1 > self->max_height_value) {
         return;
     }
+	
+	x0 += self->x_gap;
+	y0 += self->y_gap;
+	x1 += self->x_gap;
+	y1 += self->y_gap;
 
     uint8_t bufx[4] = {
         ((x0 >> 8) & 0xFF),
@@ -389,8 +394,11 @@ STATIC void set_area(rm690b0_RM690B0_obj_t *self, uint16_t x0, uint16_t y0, uint
         (y0 & 0xFF),
         ((y1 >> 8) & 0xFF),
         (y1 & 0xFF)};
+	uint8_t bufz[1] = { 0x00 };
+	
     write_spi(self, LCD_CMD_CASET, bufx, 4);
     write_spi(self, LCD_CMD_RASET, bufy, 4);
+	write_spi(self, LCD_CMD_RAMWR, bufz, 1);
 }
 
 // this function is extremely dangerous and should be called with a lot of care.
