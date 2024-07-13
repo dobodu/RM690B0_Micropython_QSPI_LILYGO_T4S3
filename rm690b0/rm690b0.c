@@ -37,18 +37,19 @@ const char* color_space_desc[] = {
     "MONOCHROME"
 };
 
-STATIC const rm690b0_rotation_t ORIENTATIONS_GENERAL[4] = {
-    { 0x00, 0, 0, 16, 0}, // { madctl, width, height, colstart, rowstart }
-    { 0x60, 0, 0, 0, 16},
-    { 0xC0, 0, 0, 16, 0},
-    { 0xA0, 0, 0, 0, 16}
-};
+/* Rotation * = USB-COLOR_SPACE_BGR
+ 
+   +-----+  +----+  +---#-+  +----+
+   |  1  |  |  2 |  |  3  |  # 4/0|            
+   +-#---+  |    #  +-----+  |    |
+            +----+           +----+
+*/
 
-STATIC const rm690b0_rotation_t ORIENTATIONS_450x600[4] = {
-    { 0x00, 450, 600, 16, 0 },
-    { 0x60, 600, 450, 0, 16 },
-    { 0xC0, 450, 600, 16, 0 },
-    { 0xA0, 600, 450, 0, 16 }
+STATIC const rm690b0_rotation_t ORIENTATIONS_GENERAL[4] = {
+    { 0x00, 450, 600, 16, 0}, // { madctl, width, height, colstart, rowstart }
+    { 0x60, 600, 450, 0, 16},
+    { 0xC0, 450, 600, 16, 0},
+    { 0xA0, 600, 450, 0, 16}
 };
 
 int mod(int x, int m) {
@@ -233,7 +234,7 @@ mp_obj_t rm690b0_RM690B0_make_new(const mp_obj_type_t *type,
     bzero(&self->rotations, sizeof(self->rotations));
     if ((self->width == 450 && self->height == 600) || \
         (self->width == 600 && self->height == 450)) {
-        memcpy(&self->rotations, ORIENTATIONS_450x600, sizeof(ORIENTATIONS_450x600));
+        memcpy(&self->rotations, ORIENTATIONS_GENERAL, sizeof(ORIENTATIONS_GENERAL));
     } else {
         mp_warning(NULL, "rotation parameter not detected");
         mp_warning(NULL, "use default rotation parameters");
@@ -251,7 +252,6 @@ mp_obj_t rm690b0_RM690B0_make_new(const mp_obj_type_t *type,
 
     return MP_OBJ_FROM_PTR(self);
 }
-
 
 STATIC mp_obj_t rm690b0_RM690B0_version()
 {   
@@ -379,6 +379,8 @@ STATIC void set_area(rm690b0_RM690B0_obj_t *self, uint16_t x0, uint16_t y0, uint
         return;
     }
 	
+	/* As RM69090 driver need offset (see ORIENTATIONS_GENERAL) then the memory area needs to follow offsets*/
+	
 	x0 += self->x_gap;
 	y0 += self->y_gap;
 	x1 += self->x_gap;
@@ -398,7 +400,7 @@ STATIC void set_area(rm690b0_RM690B0_obj_t *self, uint16_t x0, uint16_t y0, uint
 	
     write_spi(self, LCD_CMD_CASET, bufx, 4);
     write_spi(self, LCD_CMD_RASET, bufy, 4);
-	write_spi(self, LCD_CMD_RAMWR, bufz, 1);
+	write_spi(self, LCD_CMD_RAMWR, bufz, 0);  /* strict copy of Lilygo AMOLED */
 }
 
 // this function is extremely dangerous and should be called with a lot of care.
@@ -1251,9 +1253,7 @@ STATIC mp_obj_t rm690b0_RM690B0_text(size_t n_args, const mp_obj_t *args) {
     }
 
     mp_int_t x0 = mp_obj_get_int(args[3]);
-	x0 += self->x_gap;
     mp_int_t y0 = mp_obj_get_int(args[4]);
-	y0 += self->y_gap;
 
     mp_obj_dict_t *dict = MP_OBJ_TO_PTR(font->globals);
     const uint8_t width = mp_obj_get_int(mp_obj_dict_get(dict, MP_OBJ_NEW_QSTR(MP_QSTR_WIDTH)));
@@ -1395,9 +1395,7 @@ STATIC mp_obj_t rm690b0_RM690B0_write(size_t n_args, const mp_obj_t *args) {
     mp_obj_module_t *font = MP_OBJ_TO_PTR(args[1]);
 
     mp_int_t x = mp_obj_get_int(args[3]);
-	x += self->x_gap;
     mp_int_t y = mp_obj_get_int(args[4]);
-	y += self->y_gap;
     mp_int_t fg_color;
     mp_int_t bg_color;
 
