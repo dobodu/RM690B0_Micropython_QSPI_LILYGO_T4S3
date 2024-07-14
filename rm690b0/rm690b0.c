@@ -302,32 +302,31 @@ STATIC mp_obj_t rm690b0_RM690B0_init(mp_obj_t self_in)
 {
     rm690b0_RM690B0_obj_t *self = MP_OBJ_TO_PTR(self_in);
 	
-	write_spi(self, LCD_CMD_SETPAGE, (uint8_t[]) {0x20}, 1);  // SET PAGE
+	write_spi(self, LCD_CMD_SETPAGE, (uint8_t[]) {0x20}, 1);  	// SET PAGE
 	write_spi(self, LCD_FAC_MIPI,(uint8_t[]) {0x0A}, 1);		// MIPI OFF
-	write_spi(self, LCD_FAC_SPI,(uint8_t[]) {0x80}, 1);		// SPI Write ram
+	write_spi(self, LCD_FAC_SPI,(uint8_t[]) {0x80}, 1);			// SPI Write ram
 	write_spi(self, LCD_FAC_SWIRE1,(uint8_t[]) {0x51}, 1);		// ! 230918:SWIRE FOR BV6804
 	write_spi(self, LCD_FAC_SWIRE2,(uint8_t[]) {0x2E}, 1);		// ! 230918:SWIRE FOR BV6804
-	write_spi(self, LCD_CMD_SETPAGE, (uint8_t[]) {0x00}, 1);  // SET PAGE
-	write_spi(self, LCD_CMD_COLMOD, (uint8_t[]) {0x55},1);	  // Interface Pixel Format 
-	
-/*	write_spi(self, LCD_CMD_COLMOD, (uint8_t[]) {
+	write_spi(self, LCD_CMD_SETPAGE, (uint8_t[]) {0x00}, 1);  	// SET PAGE
+
+//	write_spi(self, LCD_CMD_COLMOD, (uint8_t[]) {0x55},1);	  	// Init sequence of Lilygo Amoled Series
+	write_spi(self, LCD_CMD_COLMOD, (uint8_t[]) {			  	// Interface Pixel Format of rm67172 driver colmod_cal = 0x75 if 16bpp
         self->colmod_cal,
-    }, 1);													// Interface Pixel Format */
+    }, 1);								
 	
-	write_spi(self, LCD_CMD_SETDSIMODE, (uint8_t[]) {0x00}, 1);
-	write_spi(self, LCD_CMD_TEON, (uint8_t[]) {0x00}, 1); 	//TE ON
-	write_spi(self, LCD_CMD_WRDISBV, (uint8_t[]) {0x00}, 1); 	//WRITE BRIGHTNESS VALUE
-	write_spi(self, LCD_CMD_SLPOUT, NULL, 128); 	//SLEEP OUT
+	write_spi(self, LCD_CMD_SETDSIMODE, (uint8_t[]) {0x00}, 1);  // Set DSI Mode to 0x00 = Internal Timmings
 	
-	write_spi(self, LCD_CMD_MADCTL, (uint8_t[]) {
+//	write_spi(self, LCD_CMD_SETDSPIMODE, (uint8_t[]) {0xA1}, 1); // 0xA1 = 1010 0001, first bit = SPI interface write RAM enable
+	
+	write_spi(self, LCD_CMD_TEON, (uint8_t[]) {0x00}, 1); 		//TE ON
+	write_spi(self, LCD_CMD_WRDISBV, (uint8_t[]) {0x00}, 1); 	//WRITE BRIGHTNESS VALUE 0x00
+	write_spi(self, LCD_CMD_SLPOUT, NULL, 1); 					//SLEEP OUT
+	write_spi(self, LCD_CMD_MADCTL, (uint8_t[]) {				//WRITE MADCTL VALUES
         self->madctl_val,
-    }, 1);													//MADCTL
+    }, 1);													
 	
-	write_spi(self, LCD_CMD_DISPON, NULL, 1); 	//DISPLAY ON DELA 10MS
-	write_spi(self, LCD_CMD_WRDISBV, (uint8_t[]) {0xFF}, 1); 	//WRITE MAX BRIGHTNESS VALUE
-
-    mp_hal_delay_ms(100);    
-
+	write_spi(self, LCD_CMD_DISPON, NULL, 1); 					//DISPLAY ON
+	write_spi(self, LCD_CMD_WRDISBV, (uint8_t[]) {0xFF}, 1); 	//WRITE MAX BRIGHTNESS VALUE 0xFF   
 
     return mp_const_none;
 }
@@ -387,12 +386,12 @@ STATIC void set_area(rm690b0_RM690B0_obj_t *self, uint16_t x0, uint16_t y0, uint
 	y1 += self->y_gap;
 
     uint8_t bufx[4] = {
-        ((x0 >> 8) & 0xFF),
-        (x0 & 0xFF),
-        ((x1 >> 8) & 0xFF),
-        (x1 & 0xFF)};
+        ((x0 >> 8) & 0xFF),				// SC9 and SC8 are > 8 bits 
+        (x0 & 0xFF),					// SC7 to SC0 are < 8 bits
+        ((x1 >> 8) & 0xFF),				// EC9 and EC8
+        (x1 & 0xFF)};					// and so
     uint8_t bufy[4] = {
-        ((y0 >> 8) & 0xFF),
+        ((y0 >> 8) & 0xFF),				// SP9 and SP8 ...
         (y0 & 0xFF),
         ((y1 >> 8) & 0xFF),
         (y1 & 0xFF)};

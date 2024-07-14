@@ -61,6 +61,7 @@ extern "C" {
 // Other adress added for rm690b0
 
 #define LCD_CMD_SETDSIMODE  0xC2 // Set DSI Mode
+#define LCD_CMD_SETDSPIMODE 0xC4 // Set DSPI Mode
 #define LCD_CMD_SETPAGE		0xFE // Set page
 #define LCD_FAC_MIPI		0x26 // MIPI
 #define LCD_FAC_SPI			0x24 // SPI

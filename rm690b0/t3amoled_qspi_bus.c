@@ -138,7 +138,7 @@ STATIC void hal_lcd_qspi_panel_tx_color(mp_obj_base_t *self,			// tx_color(self-
             chunk_size = len;								// chunk size if the remaining length of color_buffer
         }
         t.base.tx_buffer = p_color;
-        t.base.length = chunk_size * 16;					//  /!\   Modified *16 vs *8 in initial as 16bppp ?
+        t.base.length = chunk_size * 8;					//  /!\   *8 for bits 
         spi_device_polling_transmit(spi_obj->spi, (spi_transaction_t *)&t);
         len -= chunk_size;									// next chunk if it was over buffer max length
         p_color += chunk_size;
