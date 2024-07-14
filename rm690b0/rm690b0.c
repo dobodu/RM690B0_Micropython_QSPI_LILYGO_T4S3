@@ -65,7 +65,7 @@ Below are transmission related functions.
 
 STATIC void write_color(rm690b0_RM690B0_obj_t *self, const void *buf, int len) {
     if (self->lcd_panel_p) {
-            self->lcd_panel_p->tx_color(self->bus_obj, 0, buf, len);
+            self->lcd_panel_p->tx_color(self->bus_obj, 0, buf, len);				// send color to panel using the panel tx_color
     } else {
         mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Failed to find the panel object."));
     }
@@ -1231,98 +1231,98 @@ STATIC mp_obj_t rm690b0_RM690B0_text(size_t n_args, const mp_obj_t *args) {
     size_t source_len = 0;
 
     // extract arguments
-    mp_obj_module_t *font = MP_OBJ_TO_PTR(args[1]);
+    mp_obj_module_t *font = MP_OBJ_TO_PTR(args[1]);  		//  The font pointer (font) is Arg n°1
 
     if (mp_obj_is_int(args[2])) {
-        mp_int_t c = mp_obj_get_int(args[2]);
+        mp_int_t c = mp_obj_get_int(args[2]);    			// if Arg n°2 a 1 byte single caracter  (c) : & 0xFF for 1 byte
         single_char_s = (c & 0xff);
         source = &single_char_s;
         source_len = 1;
-    } else if (mp_obj_is_str(args[2])) {
-        source = (uint8_t *) mp_obj_str_get_str(args[2]);
-        source_len = strlen((char *)source);
-    } else if (mp_obj_is_type(args[2], &mp_type_bytes)) {
-        mp_obj_t text_data_buff = args[2];
-        mp_buffer_info_t text_bufinfo;
-        mp_get_buffer_raise(text_data_buff, &text_bufinfo, MP_BUFFER_READ);
-        source = text_bufinfo.buf;
-        source_len = text_bufinfo.len;
+    } else if (mp_obj_is_str(args[2])) { 					// If Arg n°2 is a sting
+        source = (uint8_t *) mp_obj_str_get_str(args[2]); 	// source is a string and (source)
+        source_len = strlen((char *)source);				// source_len is its length
+    } else if (mp_obj_is_type(args[2], &mp_type_bytes)) {	// If Arg n°2 is a byte_array
+        mp_obj_t text_data_buff = args[2];					// text_data_buff is data buffer
+        mp_buffer_info_t text_bufinfo;						// text_bufinfo 
+        mp_get_buffer_raise(text_data_buff, &text_bufinfo, MP_BUFFER_READ);	// text_bufinfo is activated text_data_buff receives data 
+        source = text_bufinfo.buf;							// source is a string and (source)
+        source_len = text_bufinfo.len;						// source_len is its length
     } else {
         mp_raise_TypeError(MP_ERROR_TEXT("text requires either int, str or bytes."));
         return mp_const_none;
     }
 
-    mp_int_t x0 = mp_obj_get_int(args[3]);
-    mp_int_t y0 = mp_obj_get_int(args[4]);
+    mp_int_t x0 = mp_obj_get_int(args[3]);					// x0 is the 3rd Args
+    mp_int_t y0 = mp_obj_get_int(args[4]);					// x0 is the 3rd Args
 
-    mp_obj_dict_t *dict = MP_OBJ_TO_PTR(font->globals);
-    const uint8_t width = mp_obj_get_int(mp_obj_dict_get(dict, MP_OBJ_NEW_QSTR(MP_QSTR_WIDTH)));
-    const uint8_t height = mp_obj_get_int(mp_obj_dict_get(dict, MP_OBJ_NEW_QSTR(MP_QSTR_HEIGHT)));
-    const uint8_t first = mp_obj_get_int(mp_obj_dict_get(dict, MP_OBJ_NEW_QSTR(MP_QSTR_FIRST)));
-    const uint8_t last = mp_obj_get_int(mp_obj_dict_get(dict, MP_OBJ_NEW_QSTR(MP_QSTR_LAST)));
+    mp_obj_dict_t *dict = MP_OBJ_TO_PTR(font->globals);		// dict points to Font object (font)
+    const uint8_t width = mp_obj_get_int(mp_obj_dict_get(dict, MP_OBJ_NEW_QSTR(MP_QSTR_WIDTH)));	 	// font.witdh is the font width
+    const uint8_t height = mp_obj_get_int(mp_obj_dict_get(dict, MP_OBJ_NEW_QSTR(MP_QSTR_HEIGHT)));		// font.height
+    const uint8_t first = mp_obj_get_int(mp_obj_dict_get(dict, MP_OBJ_NEW_QSTR(MP_QSTR_FIRST)));		// firt character
+    const uint8_t last = mp_obj_get_int(mp_obj_dict_get(dict, MP_OBJ_NEW_QSTR(MP_QSTR_LAST)));			// last char.
 
-    mp_obj_t font_data_buff = mp_obj_dict_get(dict, MP_OBJ_NEW_QSTR(MP_QSTR_FONT));
-    mp_buffer_info_t bufinfo;
-    mp_get_buffer_raise(font_data_buff, &bufinfo, MP_BUFFER_READ);
-    const uint8_t *font_data = bufinfo.buf;
+    mp_obj_t font_data_buff = mp_obj_dict_get(dict, MP_OBJ_NEW_QSTR(MP_QSTR_FONT));						// font_data_buff is the font buff
+    mp_buffer_info_t bufinfo;																			// bufinfo is the buffer interrupt
+    mp_get_buffer_raise(font_data_buff, &bufinfo, MP_BUFFER_READ);										// 
+    const uint8_t *font_data = bufinfo.buf;																// font_data is bufinfo.buf data pointer  
 
-    uint16_t fg_color;
-    uint16_t bg_color;
+    uint16_t fg_color;				// Front color
+    uint16_t bg_color;				// Back color
 
     if (n_args > 5) {
-        fg_color = mp_obj_get_int(args[5]);
+        fg_color = mp_obj_get_int(args[5]);	// fg_colors is the 5th Args Front color, WHITE defaut 
     } else {
         fg_color = WHITE;
     }
 
-    if (n_args > 6) {
+    if (n_args > 6) {						/// fg_colors is the 6th Args, BLACK defaut
         bg_color = mp_obj_get_int(args[6]);
     } else {
         bg_color = BLACK;
     }
 
-    uint8_t wide = width / 8;
-    size_t buf_size = width * height * 2;
+    uint8_t wide = width / 8;				// wide = Nb of Bytes 
+    size_t buf_size = width * height * 2;	// buf_size = Width (pixel) * height (pixel) * 2 bytes per pixel (16b)
 
-    if (self->use_frame_buffer) {
+    if (self->use_frame_buffer) {			// if RM690B0 uses  a frame buffer (option for rm690b0 initialisation)
     } else {
-        self->frame_buffer = m_malloc(buf_size);
+        self->frame_buffer = m_malloc(buf_size);		// else allocates frame_buffer
     }
 
     uint8_t chr;
     if (self->frame_buffer) {
-    while (source_len--) {
-        chr = *source++;
-            if (chr >= first && chr <= last) {
-                uint16_t buf_idx = 0;
-                uint16_t chr_idx = (chr - first) * (height * wide);
-                for (uint8_t line = 0; line < height; line++) {
-                    for (uint8_t line_byte = 0; line_byte < wide; line_byte++) {
-                        uint8_t chr_data = font_data[chr_idx];
-                        for (uint8_t bit = 8; bit; bit--) {
+    while (source_len--) {								// for the full source (in bytes)
+        chr = *source++;								// for every characteres in string
+            if (chr >= first && chr <= last) {			// if string character is in the font range 
+                uint16_t buf_idx = 0;					// buf_idx is the index (uint16)
+                uint16_t chr_idx = (chr - first) * (height * wide);	 // chr_index is the charactere index in ghe font file 
+                for (uint8_t line = 0; line < height; line++) {					// for every line of the font character
+                    for (uint8_t line_byte = 0; line_byte < wide; line_byte++) { 	//for wide bytes of every line 
+                        uint8_t chr_data = font_data[chr_idx];					 		// get corresponding 
+                        for (uint8_t bit = 8; bit; bit--) {						 		// for every bits of the font
                             if (chr_data >> (bit - 1) & 1) {
-                                self->frame_buffer[buf_idx] = fg_color;
+                                self->frame_buffer[buf_idx] = fg_color;						// We send 2 bytes for fg_color to the frame buffer
                             } else {
                                 self->frame_buffer[buf_idx] = bg_color;
                             }
-                            buf_idx++;
+                            buf_idx++;														// Next buffer index (16bit = ++)
                         }
-                        chr_idx++;
-                    }
+                        chr_idx++;														// Next character
+                    }																// next byte
+                }																// next line
+                uint16_t x1 = x0 + width - 1;									// position on screen 
+                if (x1 < self->width) {											// if it's on screen max
+                    set_area(self, x0, y0, x1, y0 + height - 1);				// Set area
+                    write_color(self, (uint8_t *)self->frame_buffer, buf_size); // and write bytes to screen
                 }
-                uint16_t x1 = x0 + width - 1;
-                if (x1 < self->width) {
-                    set_area(self, x0, y0, x1, y0 + height - 1);
-                    write_color(self, (uint8_t *)self->frame_buffer, buf_size);
-                }
-                x0 += width;
-            }
-        }
-    }
+                x0 += width;				// next chart ==> x0 moves to next place
+            }					// finishing all characters
+        }		//finiheds source
+    }		//notihing more in frame buffer
 
     if (self->use_frame_buffer) {
     } else {
-        m_free(self->frame_buffer);
+        m_free(self->frame_buffer);  //Than free memory
     }
 
     return mp_const_none;

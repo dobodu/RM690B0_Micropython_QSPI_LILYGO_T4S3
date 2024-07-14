@@ -15,6 +15,8 @@
 
 #define DEBUG_printf(...)
 
+#define SEND_BUF_SIZE           (16384)
+
 #include <string.h>
 
 #if MICROPY_VERSION >= MICROPY_MAKE_VERSION(1, 23, 0) // STATIC should be replaced with static.
@@ -99,27 +101,27 @@ STATIC void hal_lcd_qspi_panel_tx_param(mp_obj_base_t *self,
 }
 
 
-STATIC void hal_lcd_qspi_panel_tx_color(mp_obj_base_t *self,
-                                        int            lcd_cmd,
-                                        const void    *color,
-                                        size_t         color_size)
+STATIC void hal_lcd_qspi_panel_tx_color(mp_obj_base_t *self,			// tx_color(self->bus_obj, 0, buf, len);	
+                                        int            lcd_cmd,			// 0 in below command
+                                        const void    *color,			// pointer to color buffer (full character for example)
+                                        size_t         color_size)		// size of color buffer
 {
     DEBUG_printf("hal_lcd_qspi_panel_tx_color cmd:, color_size: %u\n", /* lcd_cmd, */ color_size);
 
-    rm690b0_qspi_bus_obj_t *qspi_panel_obj = (rm690b0_qspi_bus_obj_t *)self;
-    machine_hw_spi_obj_t *spi_obj = ((machine_hw_spi_obj_t *)qspi_panel_obj->spi_obj);
-    spi_transaction_ext_t t;
+    rm690b0_qspi_bus_obj_t *qspi_panel_obj = (rm690b0_qspi_bus_obj_t *)self;			// qspi_panel_obj is pointer to display buffer
+    machine_hw_spi_obj_t *spi_obj = ((machine_hw_spi_obj_t *)qspi_panel_obj->spi_obj);  // spi_obj is pointer to spi 
+    spi_transaction_ext_t t;															// t is spi transactionner
 
-    mp_hal_pin_od_low(qspi_panel_obj->cs_pin);
+    mp_hal_pin_od_low(qspi_panel_obj->cs_pin);				// Activate SPI bus transfert by CS_Pin 
     memset(&t, 0, sizeof(t));
     t.base.flags = SPI_TRANS_MODE_QIO;
     t.base.cmd = 0x32;
-    t.base.addr = 0x002C00;
+    t.base.addr = 0x002C00;									// 2C00 is the memory write adress (LCD_CMD_RAMWR)
     spi_device_polling_transmit(spi_obj->spi, (spi_transaction_t *)&t);
 
-    uint8_t *p_color = (uint8_t *)color;
+    uint8_t *p_color = (uint8_t *)color;					// p_color is the dynamic pointer to color buffer
     size_t chunk_size;
-    size_t len = color_size;
+    size_t len = color_size;								// len is the length of dynamic color buffer
     memset(&t, 0, sizeof(t));
     t.base.flags = SPI_TRANS_MODE_QIO | \
                     SPI_TRANS_VARIABLE_CMD | \
@@ -130,19 +132,19 @@ STATIC void hal_lcd_qspi_panel_tx_color(mp_obj_base_t *self,
     t.dummy_bits = 0;
     
     do {
-        if (len > 0x8000) { //32 KB
-            chunk_size = 0x8000;
+        if (len > SEND_BUF_SIZE) { 							// shorten to send buffer max length
+            chunk_size = SEND_BUF_SIZE;
         } else {
-            chunk_size = len;
+            chunk_size = len;								// chunk size if the remaining length of color_buffer
         }
         t.base.tx_buffer = p_color;
-        t.base.length = chunk_size * 8;
+        t.base.length = chunk_size * 16;					//  /!\   Modified *16 vs *8 in initial as 16bppp ?
         spi_device_polling_transmit(spi_obj->spi, (spi_transaction_t *)&t);
-        len -= chunk_size;
+        len -= chunk_size;									// next chunk if it was over buffer max length
         p_color += chunk_size;
     } while (len > 0);
 
-    mp_hal_pin_od_high(qspi_panel_obj->cs_pin);
+    mp_hal_pin_od_high(qspi_panel_obj->cs_pin);				// Desactivate SPI bus transfert by CS_Pin 
 }
 
 
