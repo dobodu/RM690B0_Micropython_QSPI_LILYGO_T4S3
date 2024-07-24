@@ -302,31 +302,23 @@ STATIC mp_obj_t rm690b0_RM690B0_init(mp_obj_t self_in)
 {
     rm690b0_RM690B0_obj_t *self = MP_OBJ_TO_PTR(self_in);
 	
-	write_spi(self, LCD_CMD_SETPAGE, (uint8_t[]) {0x20}, 1);  	// SET PAGE
-	write_spi(self, LCD_FAC_MIPI,(uint8_t[]) {0x0A}, 1);		// MIPI OFF
-	write_spi(self, LCD_FAC_SPI,(uint8_t[]) {0x80}, 1);			// SPI Write ram
-	write_spi(self, LCD_FAC_SWIRE1,(uint8_t[]) {0x51}, 1);		// ! 230918:SWIRE FOR BV6804
-	write_spi(self, LCD_FAC_SWIRE2,(uint8_t[]) {0x2E}, 1);		// ! 230918:SWIRE FOR BV6804
-	write_spi(self, LCD_CMD_SETPAGE, (uint8_t[]) {0x00}, 1);  	// SET PAGE
-
-//	write_spi(self, LCD_CMD_COLMOD, (uint8_t[]) {0x55},1);	  	// Init sequence of Lilygo Amoled Series
-	write_spi(self, LCD_CMD_COLMOD, (uint8_t[]) {			  	// Interface Pixel Format of rm67172 driver colmod_cal = 0x75 if 16bpp
-        self->colmod_cal,
-    }, 1);								
-	
-	write_spi(self, LCD_CMD_SETDSIMODE, (uint8_t[]) {0x00}, 1);  // Set DSI Mode to 0x00 = Internal Timmings
-	
-//	write_spi(self, LCD_CMD_SETDSPIMODE, (uint8_t[]) {0xA1}, 1); // 0xA1 = 1010 0001, first bit = SPI interface write RAM enable
-	
-	write_spi(self, LCD_CMD_TEON, (uint8_t[]) {0x00}, 1); 		//TE ON
-	write_spi(self, LCD_CMD_WRDISBV, (uint8_t[]) {0x00}, 1); 	//WRITE BRIGHTNESS VALUE 0x00
-	write_spi(self, LCD_CMD_SLPOUT, NULL, 1); 					//SLEEP OUT
-	write_spi(self, LCD_CMD_MADCTL, (uint8_t[]) {				//WRITE MADCTL VALUES
-        self->madctl_val,
-    }, 1);													
-	
-	write_spi(self, LCD_CMD_DISPON, NULL, 1); 					//DISPLAY ON
-	write_spi(self, LCD_CMD_WRDISBV, (uint8_t[]) {0xFF}, 1); 	//WRITE MAX BRIGHTNESS VALUE 0xFF   
+	write_spi(self, LCD_CMD_SETPAGE, (uint8_t[]) {0x20}, 1);  					// SET FACTORY SETUP PAGE
+	write_spi(self, LCD_FAC_MIPI,(uint8_t[]) {0x0A}, 1);						// MIPI OFF
+	write_spi(self, LCD_FAC_SPI,(uint8_t[]) {0x80}, 1);							// SPI Write ram
+	write_spi(self, LCD_FAC_SWIRE1,(uint8_t[]) {0x51}, 1);						// ! 230918:SWIRE FOR BV6804
+	write_spi(self, LCD_FAC_SWIRE2,(uint8_t[]) {0x2E}, 1);						// ! 230918:SWIRE FOR BV6804
+	write_spi(self, LCD_CMD_SETPAGE, (uint8_t[]) {0x00}, 1);  					// SET SETUP PAGE
+	write_spi(self, LCD_CMD_CASET, (uint8_t[]) {0x00, 0x10, 0x01, 0xD1}, 4);  	// SET COLUMN START ADRESSE SC = 0x0010 = 16 and EC = 0x01D1 = 465 (450 columns but an 16 offset)
+	write_spi(self, LCD_CMD_RASET, (uint8_t[]) {0x00, 0x00, 0x02, 0x57}, 4);	// SET ROW START ADRESS SP = 0 and EP = 0x256 = 599 (600 lines)
+	write_spi(self, LCD_CMD_COLMOD, (uint8_t[]) { self->colmod_cal }, 1);		// Interface Pixel Format of rm67172 driver colmod_cal = 0x75 if 16bpp
+	write_spi(self, LCD_CMD_SETDSIMODE, (uint8_t[]) {0x00}, 1); 				// Set DSI Mode to 0x00 = Internal Timmings
+//	write_spi(self, LCD_CMD_SETDSPIMODE, (uint8_t[]) {0xA1}, 1); 				// 0xA1 = 1010 0001, first bit = SPI interface write RAM enable
+	write_spi(self, LCD_CMD_TEON, (uint8_t[]) {0x00}, 1); 						// TE ON
+	write_spi(self, LCD_CMD_WRDISBV, (uint8_t[]) {0x00}, 1); 					// WRITE BRIGHTNESS VALUE 0x00
+	write_spi(self, LCD_CMD_SLPOUT, NULL, 1); 									// SLEEP OUT
+	write_spi(self, LCD_CMD_MADCTL, (uint8_t[]) { self->madctl_val }, 1);		// WRITE MADCTL VALUES
+	write_spi(self, LCD_CMD_DISPON, NULL, 1); 									// DISPLAY ON
+	write_spi(self, LCD_CMD_WRDISBV, (uint8_t[]) {0xFF}, 1); 					// WRITE MAX BRIGHTNESS VALUE 0xFF   
 
     return mp_const_none;
 }
