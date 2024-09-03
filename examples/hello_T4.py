@@ -6,11 +6,12 @@ hello.py
 
 import random
 import utime
-import rm67162
-import tft_config
-import vga2_bold_16x32 as font
+import rm690b0
+import tft_config_t4
+import fonts.vga2_bold_16x32 as font
+#import fonts.medium as font
 
-tft = tft_config.config()
+tft = tft_config_t4.config()
 
 def center(text):
     length = 1 if isinstance(text, int) else len(text)
@@ -19,19 +20,26 @@ def center(text):
         text,
         (tft.width() - length * font.WIDTH) // 2,
         (tft.height() - font.HEIGHT ) // 2,
-        rm67162.WHITE,
-        rm67162.RED)
+        rm690b0.WHITE,
+        rm690b0.RED)
 
 def main():
+    tft_config_t4.TFT_CDE.value(1)
     tft.reset()
     tft.init()
-    tft.rotation(1)
-    tft.fill(rm67162.RED)
+    tft.rotation(3)
+    tft.fill(rm690b0.RED)
     center(b'\xAEHello\xAF')
     utime.sleep(2)
-    tft.fill(rm67162.BLACK)
+    tft.fill(rm690b0.BLACK)
+
+    for i in range(400):
+        tft.pixel(i,i,rm690b0.WHITE)
+        utime.sleep(0.005)
+
 
     while True:
+                
         for rotation in range(4):
             tft.rotation(rotation)
             tft.fill(0)
@@ -53,6 +61,8 @@ def main():
                         random.getrandbits(8),
                         random.getrandbits(8)))
                 utime.sleep(0.005)
+                
+            utime.sleep(1)
 
 
 main()

@@ -19,7 +19,7 @@ def config():
             spi=spi, data=(TFT_D0, TFT_D1, TFT_D2, TFT_D3),
             dc=TFT_D1, cs=TFT_CS, pclk=80_000_000, width=450, height=600)
             
-    return rm690b0.RM690B0(panel, reset=TFT_RST, bpp=16)
+    return rm690b0.RM690B0(panel, reset=TFT_RST, bpp=16, use_frame_buffer=True)
 
 
 def color565(r, g, b):
