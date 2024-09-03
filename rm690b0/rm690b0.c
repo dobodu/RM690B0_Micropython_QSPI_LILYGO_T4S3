@@ -601,8 +601,27 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(rm690b0_RM690B0_rect_obj, 6, 6, rm690
 
 
 STATIC void fill_rect(rm690b0_RM690B0_obj_t *self, uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t color) {
-    // set_area(self, x, y, x + w - 1, y + h - 1);
-    fill_color_buffer(self, color, x, y, w, h);
+	uint16_t col_start = x;
+	uint16_t col_end = x + w - 1;
+	uint16_t row_start = y;
+	uint16_t row_end = y + h - 1;
+
+/* Check are done to see if COL and ROW START ARE EVEN and COL and ROW END minus START are also divisible by 2*/
+
+	if (col_start & 0x01) {
+		col_start -= 1;
+	}
+	if (col_end & 0x01) {
+		col_end += 1;
+	}
+	if (row_start & 0x01) {
+		row_start -= 1;
+	}
+	if (row_end & 0x01) {
+		row_end += 1;
+	}
+	set_area(self, col_start, row_start, col_end, row_end);
+    fill_color_buffer(self, color, col_start, row_start, col_end - col_start, row_end - row_start);
 }
 
 
