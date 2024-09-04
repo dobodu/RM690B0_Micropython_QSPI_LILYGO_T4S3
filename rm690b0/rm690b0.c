@@ -37,7 +37,9 @@ const char* color_space_desc[] = {
     "MONOCHROME"
 };
 
-/* Rotation * = USB-COLOR_SPACE_BGR
+/* Rotation 
+
+# = USB PORT
  
    +-----+  +----+  +---#-+  +----+
    |  1  |  |  2 |  |  3  |  # 4/0|            
@@ -1237,33 +1239,45 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(rm690b0_RM690B0_bitmap_obj, 6, 6, rm6
 STATIC mp_obj_t rm690b0_RM690B0_text(size_t n_args, const mp_obj_t *args) {
     rm690b0_RM690B0_obj_t *self = MP_OBJ_TO_PTR(args[0]);
     uint8_t single_char_s;
+	uint8_t x_offset = 0;
+	uint8_t y_offset = 0 ;
     const uint8_t *source = NULL;
     size_t source_len = 0;
 
     // extract arguments
-    mp_obj_module_t *font = MP_OBJ_TO_PTR(args[1]);  		//  The font pointer (font) is Arg n°1
+    mp_obj_module_t *font = MP_OBJ_TO_PTR(args[1]);  		// Arg n°1 is the font pointer (font)
 
     if (mp_obj_is_int(args[2])) {
-        mp_int_t c = mp_obj_get_int(args[2]);    			// if Arg n°2 a 1 byte single caracter  (c) : & 0xFF for 1 byte
+        mp_int_t c = mp_obj_get_int(args[2]);    			// Arg n°2 is wether a 1 byte single caracter  (c)
         single_char_s = (c & 0xff);
         source = &single_char_s;
         source_len = 1;
-    } else if (mp_obj_is_str(args[2])) { 					// If Arg n°2 is a sting
-        source = (uint8_t *) mp_obj_str_get_str(args[2]); 	// source is a string and (source)
-        source_len = strlen((char *)source);				// source_len is its length
-    } else if (mp_obj_is_type(args[2], &mp_type_bytes)) {	// If Arg n°2 is a byte_array
-        mp_obj_t text_data_buff = args[2];					// text_data_buff is data buffer
-        mp_buffer_info_t text_bufinfo;						// text_bufinfo 
+    } else if (mp_obj_is_str(args[2])) { 					// or a sting
+        source = (uint8_t *) mp_obj_str_get_str(args[2]);
+        source_len = strlen((char *)source);
+    } else if (mp_obj_is_type(args[2], &mp_type_bytes)) {	// or a byte_array
+        mp_obj_t text_data_buff = args[2];
+        mp_buffer_info_t text_bufinfo;
         mp_get_buffer_raise(text_data_buff, &text_bufinfo, MP_BUFFER_READ);	// text_bufinfo is activated text_data_buff receives data 
-        source = text_bufinfo.buf;							// source is a string and (source)
-        source_len = text_bufinfo.len;						// source_len is its length
+        source = text_bufinfo.buf;							// in every case the string is named source 
+        source_len = text_bufinfo.len;						// its length is source_len
     } else {
         mp_raise_TypeError(MP_ERROR_TEXT("text requires either int, str or bytes."));
         return mp_const_none;
     }
 
-    mp_int_t x0 = mp_obj_get_int(args[3]);					// x0 is the 3rd Args
-    mp_int_t y0 = mp_obj_get_int(args[4]);					// x0 is the 3rd Args
+    mp_int_t x0 = mp_obj_get_int(args[3]);					// Arg n°3 is x_position x0
+    mp_int_t y0 = mp_obj_get_int(args[4]);					// Arg n°4 is y_position y0
+	
+	if (x0 & 0x01) {		// For screen CASET restriction, if x0 is odd, make it even and declare an offset
+		x0 -= 1;			// If we add a left column, we need lso a righ column in order to fullfil SC[9:0] and EC[9:0]-SC[9:0]+1 must can be divisible by 2
+		x_offset = 1;
+	}
+	
+	if (y0 & 0x01) {		// For screen RASET restriction, if x0 is odd, make it even and declare an offset
+		y0 -= 1;			// If we add a left column, we need lso a righ column in order to fullfil SP[9:0] and EP[9:0]-SP[9:0]+1 must can be divisible by 2
+		y_offset = 1;
+	}
 
     mp_obj_dict_t *dict = MP_OBJ_TO_PTR(font->globals);		// dict points to Font object (font)
     const uint8_t width = mp_obj_get_int(mp_obj_dict_get(dict, MP_OBJ_NEW_QSTR(MP_QSTR_WIDTH)));	 	// font.witdh is the font width
@@ -1279,20 +1293,22 @@ STATIC mp_obj_t rm690b0_RM690B0_text(size_t n_args, const mp_obj_t *args) {
     uint16_t fg_color;				// Front color
     uint16_t bg_color;				// Back color
 
-    if (n_args > 5) {
-        fg_color = mp_obj_get_int(args[5]);	// fg_colors is the 5th Args Front color, WHITE defaut 
+    if (n_args > 5) {				// Arg n°5 is the front color, WHITE by default
+        fg_color = mp_obj_get_int(args[5]);
     } else {
         fg_color = WHITE;
     }
 
-    if (n_args > 6) {						/// fg_colors is the 6th Args, BLACK defaut
+    if (n_args > 6) {				// Arg n°5 is the backgroun color, BLACK by default
         bg_color = mp_obj_get_int(args[6]);
     } else {
         bg_color = BLACK;
     }
 
-    uint8_t wide = width / 8;				// wide = Nb of Bytes 
-    size_t buf_size = width * height * 2;	// buf_size = Width (pixel) * height (pixel) * 2 bytes per pixel (16b)
+    uint8_t wide = width / 8;				// wide = width in Bytes for a single char (ex 16bit large font is 2 bytes per line)
+    size_t buf_size = (width + 2 * x_offset) * (height + 2 * y_offset) * 2;	
+											// buf_size for 1 char = Width (pixel) * height (pixel) * 2 bytes per pixel (16b)
+											// of course, if offset are needed, the buff size increase
 
     if (self->use_frame_buffer) {			// if RM690B0 uses  a frame buffer (option for rm690b0 initialisation)
     } else {
@@ -1302,33 +1318,64 @@ STATIC mp_obj_t rm690b0_RM690B0_text(size_t n_args, const mp_obj_t *args) {
     uint8_t chr;
     if (self->frame_buffer) {
     while (source_len--) {								// for the full source (in bytes)
-        chr = *source++;								// for every characteres in string
-            if (chr >= first && chr <= last) {			// if string character is in the font range 
+        chr = *source++;								// for every characteres in string as char
+            if (chr >= first && chr <= last) {			// if string character is in the font character range 
                 uint16_t buf_idx = 0;					// buf_idx is the index (uint16)
-                uint16_t chr_idx = (chr - first) * (height * wide);	 // chr_index is the charactere index in ghe font file 
-                for (uint8_t line = 0; line < height; line++) {					// for every line of the font character
+                uint16_t chr_idx = (chr - first) * (height * wide);	 // chr_index is the charactere index in the font file 
+
+                if (y_offset == 1) {						// if y_offset needed, we add a full line of Bg_color on top 
+					for (uint8_t offbit = 0; offbit < width + 2; offbit++) {
+						self->frame_buffer[buf_idx] = bg_color;
+						buf_idx++;
+					}
+				}
+				
+				for (uint8_t line = 0; line < height; line++) {					// for every line of the font character
+				
+					if (x_offset == 1) {										// if x_offset needed, we add a pixel Bg_color at left
+						self->frame_buffer[buf_idx] = bg_color;
+						buf_idx++;
+					}
+					
                     for (uint8_t line_byte = 0; line_byte < wide; line_byte++) { 	//for wide bytes of every line 
-                        uint8_t chr_data = font_data[chr_idx];					 		// get corresponding 
-                        for (uint8_t bit = 8; bit; bit--) {						 		// for every bits of the font
-                            if (chr_data >> (bit - 1) & 1) {
-                                self->frame_buffer[buf_idx] = fg_color;						// We send 2 bytes for fg_color to the frame buffer
+                        uint8_t chr_data = font_data[chr_idx];					 	// get corresponding data
+                        for (uint8_t bit = 8; bit; bit--) {						 	// for every bits of the font
+                            if (chr_data >> (bit - 1) & 1) {						// if bit = 1
+                                self->frame_buffer[buf_idx] = fg_color;				// write fg_color to the frame buffer
                             } else {
-                                self->frame_buffer[buf_idx] = bg_color;
+                                self->frame_buffer[buf_idx] = bg_color;				// otherwise write bg_color
                             }
-                            buf_idx++;														// Next buffer index (16bit = ++)
+                            buf_idx++;												// next frame buffer index and proceed next font bit
                         }
-                        chr_idx++;														// Next character
-                    }																// next byte
+                        chr_idx++;													// next font line_byte
+                    }															
+					if (x_offset == 1) {										// if x_offset needed, we add a pixel Bg_color at right
+						self->frame_buffer[buf_idx] = bg_color;
+						buf_idx++;
+					}
+					
                 }																// next line
-                uint16_t x1 = x0 + width - 1;									// position on screen 
-                if (x1 < self->width) {											// if it's on screen max
-                    set_area(self, x0, y0, x1, y0 + height - 1);				// Set area
+				
+				if (y_offset == 1) {						// if y_offset needed, we add a full line of Bg_color at bottom
+					for (uint8_t offbit = 0 ; offbit < width + 2; offbit++) {
+						self->frame_buffer[buf_idx] = bg_color;
+						buf_idx++;
+					}
+				}				
+				
+                uint16_t x1 = x0 + width + 2 * x_offset - 1;				// x1 is the column of the right pixel on the screen
+																			// ex x0=0 with 1 char of 16 bit large ==> x1 =15
+				uint16_t y1 = y0 + height + 2 * y_offset - 1;				// y1 is the row of the bottom pixel on the screen	
+																				
+																				
+                if (x1 < self->width) {											// if it does not overcomes screen max width
+                    set_area(self, x0, y0, x1, y1);				// Set area
                     write_color(self, (uint8_t *)self->frame_buffer, buf_size); // and write bytes to screen
                 }
                 x0 += width;				// next chart ==> x0 moves to next place
-            }					// finishing all characters
-        }		//finiheds source
-    }		//notihing more in frame buffer
+            }	// if not in font character range = Do nothing
+        } // all source character proceeded
+    } // frame buffer has been filled 
 
     if (self->use_frame_buffer) {
     } else {
