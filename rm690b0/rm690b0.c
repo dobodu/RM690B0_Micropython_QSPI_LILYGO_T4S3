@@ -39,7 +39,7 @@ const char* color_space_desc[] = {
 
 /* Rotation 
 
-# = USB PORT
+# = USB PORT POSITION
  
    +-----+  +----+  +---#-+  +----+
    |  1  |  |  2 |  |  3  |  # 4/0|            
