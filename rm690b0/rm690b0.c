@@ -16,7 +16,7 @@
 #include <string.h>
 #include <math.h>
 
-#define RM690B0_DRIVER_VERSION "0.0.1"
+#define RM690B0_DRIVER_VERSION "6.9.2024"
 
 #if MICROPY_VERSION >= MICROPY_MAKE_VERSION(1, 23, 0) // STATIC should be replaced with static.
 #undef STATIC   // This may become irrelevant later on.
@@ -24,7 +24,7 @@
 #endif
 
 #define _swap_int16_t(a, b) { int16_t t = a; a = b; b = t; }
-#define _swap_bytes(val) ((((val) >> 8) & 0x00FF) | (((val) << 8) & 0xFF00))
+//#define _swap_bytes(val) ((((val) >> 8) & 0x00FF) | (((val) << 8) & 0xFF00))
 
 #define ABS(N) (((N) < 0) ? (-(N)) : (N))
 #define mp_hal_delay_ms(delay) (mp_hal_delay_us(delay * 1000))
@@ -39,7 +39,7 @@ const char* color_space_desc[] = {
 
 /* Rotation 
 
-# = USB PORT POSITION
+# = USB PORT
  
    +-----+  +----+  +---#-+  +----+
    |  1  |  |  2 |  |  3  |  # 4/0|            
@@ -351,7 +351,7 @@ Below are drawing functions.
 
 STATIC uint16_t colorRGB(uint8_t r, uint8_t g, uint8_t b) {
     uint16_t c = ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | ((b & 0xF8) >> 3);
-    return _swap_bytes(c);
+    return ((((c) >> 8) & 0x00FF) | (((c) << 8) & 0xFF00));
 }
 
 
@@ -380,12 +380,12 @@ STATIC void set_area(rm690b0_RM690B0_obj_t *self, uint16_t x0, uint16_t y0, uint
 	y1 += self->y_gap;
 
     uint8_t bufx[4] = {
-        ((x0 >> 8) & 0xFF),				// SC9 and SC8 are > 8 bits 
-        (x0 & 0xFF),					// SC7 to SC0 are < 8 bits
-        ((x1 >> 8) & 0xFF),				// EC9 and EC8
-        (x1 & 0xFF)};					// and so
+        ((x0 >> 8) & 0xFF),	// SC9 and SC8 are > 8 bits 
+        (x0 & 0xFF),		// SC7 to SC0 are < 8 bits
+        ((x1 >> 8) & 0xFF),	// EC9 and EC8
+        (x1 & 0xFF)};		// and so
     uint8_t bufy[4] = {
-        ((y0 >> 8) & 0xFF),				// SP9 and SP8 ...
+        ((y0 >> 8) & 0xFF),	// SP9 and SP8...
         (y0 & 0xFF),
         ((y1 >> 8) & 0xFF),
         (y1 & 0xFF)};
@@ -396,7 +396,7 @@ STATIC void set_area(rm690b0_RM690B0_obj_t *self, uint16_t x0, uint16_t y0, uint
 	write_spi(self, LCD_CMD_RAMWR, bufz, 0);  /* strict copy of Lilygo AMOLED */
 }
 
-// this function is extremely dangerous and should be called with a lot of care.
+// This function is dangerous and should be called with care.
 STATIC void fill_color_buffer_fast(rm690b0_RM690B0_obj_t *self, uint32_t color, int len /*in pixel*/) {
     if (len > self->frame_buffer_size / 2) {
         mp_raise_ValueError(MP_ERROR_TEXT("fill_color_buffer: maximum length exceeded, please check dimensions."));
@@ -1240,7 +1240,7 @@ STATIC mp_obj_t rm690b0_RM690B0_text(size_t n_args, const mp_obj_t *args) {
     rm690b0_RM690B0_obj_t *self = MP_OBJ_TO_PTR(args[0]);
     uint8_t single_char_s;
 	uint8_t x_offset = 0;
-	uint8_t y_offset = 0 ;
+	uint8_t y_offset = 0;
     const uint8_t *source = NULL;
     size_t source_len = 0;
 
@@ -1266,23 +1266,23 @@ STATIC mp_obj_t rm690b0_RM690B0_text(size_t n_args, const mp_obj_t *args) {
         return mp_const_none;
     }
 
-    mp_int_t x0 = mp_obj_get_int(args[3]);					// Arg n°3 is x_position x0
-    mp_int_t y0 = mp_obj_get_int(args[4]);					// Arg n°4 is y_position y0
+    mp_int_t x = mp_obj_get_int(args[3]);					// Arg n°3 is x_position x
+    mp_int_t y = mp_obj_get_int(args[4]);					// Arg n°4 is y_position y
 	
-	if (x0 & 0x01) {		// For screen CASET restriction, if x0 is odd, make it even and declare an offset
-		x0 -= 1;			// If we add a left column, we need lso a righ column in order to fullfil SC[9:0] and EC[9:0]-SC[9:0]+1 must can be divisible by 2
+	if (x & 1) {	// For screen CASET restriction, if x0 is odd, make it even and declare an offset
+		x--;		// If we add a left column, we need lso a righ column in order to fullfil SC[9:0] and EC[9:0]-SC[9:0]+1 must can be divisible by 2
 		x_offset = 1;
 	}
 	
-	if (y0 & 0x01) {		// For screen RASET restriction, if x0 is odd, make it even and declare an offset
-		y0 -= 1;			// If we add a left column, we need lso a righ column in order to fullfil SP[9:0] and EP[9:0]-SP[9:0]+1 must can be divisible by 2
+	if (y & 1) {	// For screen RASET restriction, if x0 is odd, make it even and declare an offset
+		y--;		// If we add an upper row , we need a bottom row in order to fullfil SP[9:0] and EP[9:0]-SP[9:0]+1 must can be divisible by 2
 		y_offset = 1;
 	}
 
     mp_obj_dict_t *dict = MP_OBJ_TO_PTR(font->globals);		// dict points to Font object (font)
-    const uint8_t width = mp_obj_get_int(mp_obj_dict_get(dict, MP_OBJ_NEW_QSTR(MP_QSTR_WIDTH)));	 	// font.witdh is the font width
-    const uint8_t height = mp_obj_get_int(mp_obj_dict_get(dict, MP_OBJ_NEW_QSTR(MP_QSTR_HEIGHT)));		// font.height
-    const uint8_t first = mp_obj_get_int(mp_obj_dict_get(dict, MP_OBJ_NEW_QSTR(MP_QSTR_FIRST)));		// firt character
+    const uint8_t width = mp_obj_get_int(mp_obj_dict_get(dict, MP_OBJ_NEW_QSTR(MP_QSTR_WIDTH)));	 	// witdh is the font width
+    const uint8_t height = mp_obj_get_int(mp_obj_dict_get(dict, MP_OBJ_NEW_QSTR(MP_QSTR_HEIGHT)));		// height...
+    const uint8_t first = mp_obj_get_int(mp_obj_dict_get(dict, MP_OBJ_NEW_QSTR(MP_QSTR_FIRST)));		// first character
     const uint8_t last = mp_obj_get_int(mp_obj_dict_get(dict, MP_OBJ_NEW_QSTR(MP_QSTR_LAST)));			// last char.
 
     mp_obj_t font_data_buff = mp_obj_dict_get(dict, MP_OBJ_NEW_QSTR(MP_QSTR_FONT));						// font_data_buff is the font buff
@@ -1308,7 +1308,7 @@ STATIC mp_obj_t rm690b0_RM690B0_text(size_t n_args, const mp_obj_t *args) {
     uint8_t wide = width / 8;				// wide = width in Bytes for a single char (ex 16bit large font is 2 bytes per line)
     size_t buf_size = (width + 2 * x_offset) * (height + 2 * y_offset) * 2;	
 											// buf_size for 1 char = Width (pixel) * height (pixel) * 2 bytes per pixel (16b)
-											// of course, if offset are needed, the buff size increase
+											// of course, if offset are needed, the buff size increase (2 row and 2 coloumns)
 
     if (self->use_frame_buffer) {			// if RM690B0 uses  a frame buffer (option for rm690b0 initialisation)
     } else {
@@ -1324,7 +1324,7 @@ STATIC mp_obj_t rm690b0_RM690B0_text(size_t n_args, const mp_obj_t *args) {
                 uint16_t chr_idx = (chr - first) * (height * wide);	 // chr_index is the charactere index in the font file 
 
                 if (y_offset == 1) {						// if y_offset needed, we add a full line of Bg_color on top 
-					for (uint8_t offbit = 0; offbit < width + 2; offbit++) {
+					for (uint8_t offbit = 0; offbit < width + 2 * x_offset; offbit++) {
 						self->frame_buffer[buf_idx] = bg_color;
 						buf_idx++;
 					}
@@ -1357,22 +1357,22 @@ STATIC mp_obj_t rm690b0_RM690B0_text(size_t n_args, const mp_obj_t *args) {
                 }																// next line
 				
 				if (y_offset == 1) {						// if y_offset needed, we add a full line of Bg_color at bottom
-					for (uint8_t offbit = 0 ; offbit < width + 2; offbit++) {
+					for (uint8_t offbit = 0 ; offbit < width + 2 * x_offset; offbit++) {
 						self->frame_buffer[buf_idx] = bg_color;
 						buf_idx++;
 					}
 				}				
 				
-                uint16_t x1 = x0 + width + 2 * x_offset - 1;				// x1 is the column of the right pixel on the screen
+                uint16_t x1 = x + width + 2 * x_offset - 1;				// x1 is the column of the right pixel on the screen
 																			// ex x0=0 with 1 char of 16 bit large ==> x1 =15
-				uint16_t y1 = y0 + height + 2 * y_offset - 1;				// y1 is the row of the bottom pixel on the screen	
+				uint16_t y1 = y + height + 2 * y_offset - 1;				// y1 is the row of the bottom pixel on the screen	
 																				
 																				
                 if (x1 < self->width) {											// if it does not overcomes screen max width
-                    set_area(self, x0, y0, x1, y1);				// Set area
+                    set_area(self, x, y, x1, y1);				// Set area
                     write_color(self, (uint8_t *)self->frame_buffer, buf_size); // and write bytes to screen
                 }
-                x0 += width;				// next chart ==> x0 moves to next place
+                x += width;				// next chart ==> x0 moves to next place
             }	// if not in font character range = Do nothing
         } // all source character proceeded
     } // frame buffer has been filled 
@@ -1450,14 +1450,20 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(rm690b0_RM690B0_write_len_obj, 3, 3, 
 STATIC mp_obj_t rm690b0_RM690B0_write(size_t n_args, const mp_obj_t *args) {
     rm690b0_RM690B0_obj_t *self = MP_OBJ_TO_PTR(args[0]);
     mp_obj_module_t *font = MP_OBJ_TO_PTR(args[1]);
+	uint8_t x_l_offset = 0;
+	uint8_t x_r_offset = 0;
+	uint8_t y_u_offset = 0;
+	uint8_t y_b_offset = 0;
+	uint16_t buf_idx;
 
     mp_int_t x = mp_obj_get_int(args[3]);
     mp_int_t y = mp_obj_get_int(args[4]);
+	
     mp_int_t fg_color;
     mp_int_t bg_color;
 
-    fg_color = (n_args > 5) ? mp_obj_get_int(args[5]) : WHITE;
-    bg_color = (n_args > 6) ? mp_obj_get_int(args[6]) : BLACK;
+    fg_color = (n_args > 5) ? mp_obj_get_int(args[5]) : WHITE; // Arg 5 if front Color
+    bg_color = (n_args > 6) ? mp_obj_get_int(args[6]) : BLACK; // Aarg 6 is back color
 
     mp_obj_t *tuple_data = NULL;
     size_t tuple_len = 0;
@@ -1467,7 +1473,7 @@ STATIC mp_obj_t rm690b0_RM690B0_write(size_t n_args, const mp_obj_t *args) {
     uint16_t background_height = 0;
     uint16_t *background_data = NULL;
 
-    if (n_args > 7) {
+    if (n_args > 7) {		//Arg 7 is backgroung tupple Data
         mp_obj_tuple_get(args[7], &tuple_len, &tuple_data);
         if (tuple_len > 2) {
             mp_get_buffer_raise(tuple_data[0], &background_bufinfo, MP_BUFFER_READ);
@@ -1477,32 +1483,45 @@ STATIC mp_obj_t rm690b0_RM690B0_write(size_t n_args, const mp_obj_t *args) {
         }
     }
 
-    bool fill = (n_args > 8) ? mp_obj_is_true(args[8]) : false;
+    bool fill = (n_args > 8) ? mp_obj_is_true(args[8]) : false;  //Arg8 is Fill bool for buffer background
 
     mp_obj_dict_t *dict = MP_OBJ_TO_PTR(font->globals);
     const uint8_t bpp = mp_obj_get_int(mp_obj_dict_get(dict, MP_OBJ_NEW_QSTR(MP_QSTR_BPP)));
-    const uint8_t height = mp_obj_get_int(mp_obj_dict_get(dict, MP_OBJ_NEW_QSTR(MP_QSTR_HEIGHT)));
+    const uint8_t height = mp_obj_get_int(mp_obj_dict_get(dict, MP_OBJ_NEW_QSTR(MP_QSTR_HEIGHT)));  // height is the font height
     const uint8_t offset_width = mp_obj_get_int(mp_obj_dict_get(dict, MP_OBJ_NEW_QSTR(MP_QSTR_OFFSET_WIDTH)));
     const uint8_t max_width = mp_obj_get_int(mp_obj_dict_get(dict, MP_OBJ_NEW_QSTR(MP_QSTR_MAX_WIDTH)));
 
-    mp_obj_t widths_data_buff = mp_obj_dict_get(dict, MP_OBJ_NEW_QSTR(MP_QSTR_WIDTHS));
+    mp_obj_t widths_data_buff = mp_obj_dict_get(dict, MP_OBJ_NEW_QSTR(MP_QSTR_WIDTHS));  
     mp_buffer_info_t widths_bufinfo;
     mp_get_buffer_raise(widths_data_buff, &widths_bufinfo, MP_BUFFER_READ);
-    const uint8_t *widths_data = widths_bufinfo.buf;
+    const uint8_t *widths_data = widths_bufinfo.buf;	// widths_data is char by char width 
 
     mp_obj_t offsets_data_buff = mp_obj_dict_get(dict, MP_OBJ_NEW_QSTR(MP_QSTR_OFFSETS));
     mp_buffer_info_t offsets_bufinfo;
     mp_get_buffer_raise(offsets_data_buff, &offsets_bufinfo, MP_BUFFER_READ);
-    const uint8_t *offsets_data = offsets_bufinfo.buf;
+    const uint8_t *offsets_data = offsets_bufinfo.buf;  // offsets_data is char offset in data in order to reach each char data
 
     mp_obj_t bitmaps_data_buff = mp_obj_dict_get(dict, MP_OBJ_NEW_QSTR(MP_QSTR_BITMAPS));
     mp_buffer_info_t bitmaps_bufinfo;
     mp_get_buffer_raise(bitmaps_data_buff, &bitmaps_bufinfo, MP_BUFFER_READ);
-    bitmap_data = bitmaps_bufinfo.buf;
+    bitmap_data = bitmaps_bufinfo.buf; //bitmap_data is background data
 
+	// For screen RASET restriction, if x0 is odd, make it even and declare an offset		
+	// First check if SP[9:0] is divisible by 2
+	if (y & 1) {
+		y--;		 // This is true for the whole string ==> Proceed on top of procedure
+		y_u_offset = 1;
+	}
+	// And also check if SP[9:0] is divisible by 2 and EP[9:0]-SP[9:0]+1 must can be divisible by 2Fis
+	if ((y+height+1) & 1) {
+		y_b_offset = 1;
+	}
+	
     // allocate buffer large enough the the widest character in the font
     // if a buffer was not specified during the driver init.
-    size_t buf_size = max_width * height * 2;
+	
+    size_t buf_size =  (max_width + 2) * (height + 2) * 2;	
+										
     if (self->use_frame_buffer) {
     } else {
         self->frame_buffer = m_malloc(buf_size);
@@ -1515,15 +1534,16 @@ STATIC mp_obj_t rm690b0_RM690B0_write(size_t n_args, const mp_obj_t *args) {
         memcpy(self->frame_buffer, background_data, background_width * background_height * 2);
     }
 
-    uint16_t print_width = 0;
+    //uint16_t print_width = 0;
     mp_obj_t map_obj = mp_obj_dict_get(dict, MP_OBJ_NEW_QSTR(MP_QSTR_MAP));
     GET_STR_DATA_LEN(map_obj, map_data, map_len);
     GET_STR_DATA_LEN(args[2], str_data, str_len);
-    const byte *s = str_data, *top = str_data + str_len;
+    const byte *s = str_data, *top = str_data + str_len;  //s point the string data and top is the last data
+	
     while (s < top) {
         unichar ch;
-        ch = utf8_get_char(s);
-        s = utf8_next_char(s);
+        ch = utf8_get_char(s); // ch = current char
+        s = utf8_next_char(s); // s = next
 
         const byte *map_s = map_data, *map_top = map_data + map_len;
         uint16_t char_index = 0;
@@ -1533,8 +1553,27 @@ STATIC mp_obj_t rm690b0_RM690B0_write(size_t n_args, const mp_obj_t *args) {
             map_ch = utf8_get_char(map_s);
             map_s = utf8_next_char(map_s);
 
+			buf_idx = 0;  // Init buffer index
+			
+			// For screen CASET restriction, if x is odd, make it even and declare a left offset
+			
+			if (x & 1) {
+				x--;
+				x_l_offset = 1;
+			} else {
+				x_l_offset = 0 ;
+			}
+			
             if (ch == map_ch) {
-                uint8_t width = widths_data[char_index];
+                uint8_t width = widths_data[char_index];    //width is the character width
+				
+				// For screen CASET restriction, if x + width of the character is odd, make it even and declare a right offset
+				
+				if ((x + width) & 1) {
+					x_r_offset = 1;
+				} else {
+					x_r_offset = 0;
+				}
 
                 bs_bit = 0;
                 switch (offset_width) {
@@ -1554,31 +1593,60 @@ STATIC mp_obj_t rm690b0_RM690B0_write(size_t n_args, const mp_obj_t *args) {
                         break;
                 }
 
-                uint16_t buffer_width = (fill) ? max_width : width;
-
+                //uint16_t buffer_width = (fill) ? max_width : width;     // if fill then buffer_width = max_width else width
                 uint16_t color = 0;
-                for (uint16_t yy = 0; yy < height; yy++) {
-                    for (uint16_t xx = 0; xx < width; xx++) {
-                        if (background_data && (xx <= background_width && yy <= background_height)) {
+				
+				// if y_offset needed, we add a full line of Bg_color on top
+				if (y_u_offset == 1) {		 
+					for (uint8_t offbit = 0; offbit < width + x_l_offset + x_r_offset; offbit++) {
+						self->frame_buffer[buf_idx] = bg_color;
+						buf_idx++;
+					}
+				}
+				
+                for (uint16_t line = 0; line < height; line++) {  // for every line of char
+				
+					if (x_l_offset == 1) {										// if x_offset needed, we add a pixel Bg_color at left
+						self->frame_buffer[buf_idx] = bg_color;
+						buf_idx++;
+					}
+					
+                    for (uint16_t line_bits = 0; line_bits < width; line_bits++) { //for every bit of every line
+                        if (background_data && (line_bits <= background_width && line <= background_height)) {
                             if (get_color(bpp) == bg_color) {
-                                color = background_data[(yy * background_width + xx)];
+                                color = background_data[(line * background_width + line_bits)];
                             } else {
                                 color = fg_color;
                             }
                         } else {
-                            color = get_color(bpp) ? fg_color : bg_color;
+                            color = get_color(bpp) ? fg_color : bg_color;  //color = front_color else back_color
                         }
-                        self->frame_buffer[yy * buffer_width + xx] = color;
+                        self->frame_buffer[buf_idx] = color;
+						buf_idx++;
                     }
+					
+					if (x_r_offset == 1) {										// if x_offset needed, we add a pixel Bg_color at right
+						self->frame_buffer[buf_idx] = bg_color;
+						buf_idx++;
+					}
                 }
+				
+				if (y_b_offset == 1) {						// if y_offset needed, we add a full line of Bg_color on top 
+					for (uint8_t offbit = 0; offbit < width +  x_l_offset + x_r_offset; offbit++) {
+						self->frame_buffer[buf_idx] = bg_color;
+						buf_idx++;
+					}
+				}
 
-                uint32_t data_size = buffer_width * height * 2;
-                uint16_t x2 = x + buffer_width - 1;
-                uint16_t y2 = y + height - 1;
-                if (x2 < self->width) {
-                    set_area(self, x, y, x2, y2);
+                uint32_t data_size = (width + x_l_offset + x_r_offset) * (height + y_u_offset + y_b_offset) * 2;
+				
+				uint16_t x1 = x + width + x_l_offset + x_r_offset - 1;   //should be buffer_width if backgroung image !
+				uint16_t y1 = y + height + y_u_offset + y_b_offset - 1;
+				
+                if (x1 < self->width) {
+                    set_area(self, x, y, x1, y1);
                     write_color(self, (uint8_t *)self->frame_buffer, data_size);
-                    print_width += width;
+                    //print_width += width;
                 }
                 x += width;
                 break;
@@ -1592,7 +1660,8 @@ STATIC mp_obj_t rm690b0_RM690B0_write(size_t n_args, const mp_obj_t *args) {
         m_free(self->frame_buffer);
     }
 
-    return mp_obj_new_int(print_width);
+    //return mp_obj_new_int(print_width);
+	return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(rm690b0_RM690B0_write_obj, 5, 9, rm690b0_RM690B0_write);
 

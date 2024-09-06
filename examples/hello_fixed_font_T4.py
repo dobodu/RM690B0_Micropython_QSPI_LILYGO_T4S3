@@ -29,13 +29,21 @@ def main():
     tft.init()
     tft.rotation(3)
     tft.fill(rm690b0.RED)
-    center(b'\xAEHello\xAF')
+    
+    text = "Hello"
+    length = len(text) * font.WIDTH
+    height = font.HEIGHT
+    
+    # Write center or display
+    tft.text(font, text,
+        (tft.width() - length) // 2,
+        (tft.height() - font.HEIGHT ) // 2,
+        rm690b0.WHITE, rm690b0.RED)
     utime.sleep(2)
     tft.fill(rm690b0.BLACK)
 
-    for i in range(400):
+    for i in range(4000):
         tft.pixel(i,i,rm690b0.WHITE)
-        utime.sleep(0.005)
 
 
     while True:
@@ -43,8 +51,8 @@ def main():
         for rotation in range(4):
             tft.rotation(rotation)
             tft.fill(0)
-            col_max = tft.width() - font.WIDTH*6
-            row_max = tft.height() - font.HEIGHT
+            col_max = tft.width() - length
+            row_max = tft.height() - height
 
             for _ in range(128):
                 tft.text(
