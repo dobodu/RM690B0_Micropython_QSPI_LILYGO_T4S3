@@ -30,7 +30,7 @@ def main():
     tft.rotation(3)
     tft.fill(rm690b0.RED)
     
-    text = "Hello"
+    text = "Hello!"
     length = len(text) * font.WIDTH
     height = font.HEIGHT
     
@@ -42,8 +42,10 @@ def main():
     utime.sleep(2)
     tft.fill(rm690b0.BLACK)
 
-    for i in range(4000):
-        tft.pixel(i,i,rm690b0.WHITE)
+    for i in range(40000):
+        tft.pixel(random.randint(0, tft.width()),
+                  random.randint(0, tft.height()),
+                  rm690b0.WHITE)
 
 
     while True:
@@ -57,7 +59,7 @@ def main():
             for _ in range(128):
                 tft.text(
                     font,
-                    b'Hello!',
+                    text,
                     random.randint(0, col_max),
                     random.randint(0, row_max),
                     tft.colorRGB(
