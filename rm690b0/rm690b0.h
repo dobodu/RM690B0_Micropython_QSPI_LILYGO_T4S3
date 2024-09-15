@@ -88,12 +88,10 @@ typedef struct _Point {
     mp_float_t y;
 } Point;
 
-
 typedef struct _Polygon {
     int length;
     Point *points;
 } Polygon;
-
 
 typedef struct _rm690b0_rotation_t {
     uint8_t madctl;
@@ -109,6 +107,7 @@ typedef struct _rm690b0_RM690B0_obj_t {
     rm690b0_panel_p_t *lcd_panel_p;
     mp_obj_t reset;
 	mp_file_t *fp;              //File object
+	uint16_t *pixel_buffer;		// resident buffer if buffer_size given
     bool reset_level;
     uint8_t color_space;
 	
@@ -118,6 +117,7 @@ typedef struct _rm690b0_RM690B0_obj_t {
     uint8_t *palette;           // png palette
     uint8_t *trans_palette;     // png trans_palette
     uint8_t *gamma_table;       // png gamma_table
+	size_t  buffer_size;
 
     uint16_t width;
     uint16_t height;
@@ -132,9 +132,17 @@ typedef struct _rm690b0_RM690B0_obj_t {
     uint8_t madctl_val; // save current value of LCD_CMD_MADCTL register
     uint8_t colmod_cal; // save surrent value of LCD_CMD_COLMOD register
 
-    bool use_frame_buffer;
-    size_t frame_buffer_size;                       // frame buffer size in bytes
-    uint16_t *frame_buffer;                         // frame buffer
+	//Frame Buffer related
+
+    bool auto_refresh;
+	bool hold_display;
+	// frame_buffer is the whole display frame buffer
+    size_t frame_buffer_size;
+    uint16_t *frame_buffer;
+	// partial_frame_buffer is a temporary frame buffer
+	size_t partial_frame_buffer_size;
+	uint16_t *partial_frame_buffer;  
+	
 } rm690b0_RM690B0_obj_t;
 
 mp_obj_t rm690b0_RM690B0_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *args);
