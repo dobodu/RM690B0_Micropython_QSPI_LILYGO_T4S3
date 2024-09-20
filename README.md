@@ -84,7 +84,7 @@ Supported boards：
 
 
 ## Documentation
-In general, the screen starts at 0 and goes to 535 x 239, that's a total resolution of 536 x 240. All drawing functions should be called with this in mind.
+In general, the screen starts at 0 and goes to 599 x 449, that's a total resolution of 600 x 450. All drawing functions should be called with this in mind.
 
 - `rm690b0.COLOR`
 
@@ -125,6 +125,11 @@ In general, the screen starts at 0 and goes to 535 x 239, that's a total resolut
 - `backlight_off()`
 
   Turn off the backlight, this is equal to `brightness(0)`.
+
+- `refresh()`
+
+  Force refresh of the whole screen. 
+  Use full when i it parameter auto_refresh=false has been used
 
 - `invert_color()`
 
@@ -194,7 +199,12 @@ In general, the screen starts at 0 and goes to 535 x 239, that's a total resolut
 
   Write text using bitmap fonts starting at (x, y) using foreground color `fg_color` and background color `bg_color`.
 
+- `text_len(bitmap_font, s)`
+
+  Returns the string's width in pixels if printed in the specified font.
+
 - `write(bitmap_font, s, x, y[, fg, bg, background_tuple, fill_flag])`
+
   Write text to the display using the specified proportional or Monospace bitmap font module with the coordinates as the upper-left corner of the text. The foreground and background colors of the text can be set by the optional arguments `fg` and `bg`, otherwise the foreground color defaults to `WHITE` and the background color defaults to `BLACK`.
 
   The `font2bitmap` utility creates compatible 1 bit per pixel bitmap modules from Proportional or Monospaced True Type fonts. The character size, foreground, background colors, and characters in the bitmap module may be specified as parameters. Use the -h option for details. If you specify a buffer_size during the display initialization, it must be large enough to hold the widest character (HEIGHT * MAX_WIDTH * 2).
