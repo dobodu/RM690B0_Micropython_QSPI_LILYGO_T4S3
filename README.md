@@ -1,3 +1,7 @@
+
+VERSION DEPRECIATED PLEASE HAVE A LOOK AT [Lilygo-Amoled-Micropython](https://github.com/dobodu/Lilygo-Amoled-Micropython)
+
+
 ## RM690B0-driver-for-microPython
 ------------------------------
 
